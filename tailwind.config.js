@@ -5,6 +5,7 @@ module.exports = {
     colors: {
       deepblue: "#46529D",
       bggray: "#B9BDC8",
+      navgray: "#EFEEEC",
       white: "#FFFFFF",
       blue: "#2EBAEE",
       deepblue2: "#4D59A1"

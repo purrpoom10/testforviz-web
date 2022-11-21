@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 function BookingListPage() {
@@ -75,7 +75,140 @@ function BookingListPage() {
     }
   ];
 
+  const weekday = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ];
+
+  const month = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ];
+
   const { roomId } = useParams();
+  const [thisDay, setThisDay] = useState("");
+  const [thisMonth, setThisMonth] = useState("");
+  const [thisDate, setThisDate] = useState("");
+
+  const [dailyEvent, setDailyEvent] = useState([]);
+  const [thisWeekEvent, setThisWeekEvent] = useState([]);
+  const [nextWeekEvent, setNextWeekEvent] = useState([]);
+  const [monthEvent, setMonthEvent] = useState([]);
+  const [showEvent, setShowEvent] = useState("this week");
+
+  const getDailyEvent = (thisFullDate) => {
+    const event = [];
+    bookingData.forEach((item, index) => {
+      if (roomId === item.roomId) {
+        if (
+          thisFullDate >= item.startTime.slice(0, 10) &&
+          thisFullDate <= item.endTime.slice(0, 10)
+        ) {
+          event.push(item);
+        }
+      }
+    });
+    setDailyEvent(event);
+  };
+
+  const calWeekNo = (date) => {
+    const bookingDate = new Date(date);
+    const startDate = new Date(bookingDate.getFullYear(), 0, 1);
+    const BookingWeekNumber = Math.ceil(
+      (bookingDate - startDate + 24 * 60 * 60 * 1000) /
+        (24 * 60 * 60 * 1000) /
+        7
+    );
+    return BookingWeekNumber;
+  };
+
+  const getWeekEvent = (date) => {
+    const weekNo = calWeekNo(date);
+    const thisWeek = [];
+    const nextWeek = [];
+
+    bookingData.forEach((item) => {
+      const startDate = new Date(item.startTime);
+      const endDate = new Date(item.endTime);
+      if (
+        date.getFullYear() !== startDate.getFullYear() &&
+        date.getFullYear() !== endDate.getFullYear()
+      ) {
+        return;
+      }
+      if (roomId === item.roomId) {
+        const StartBookingWeekNumber = calWeekNo(item.startTime);
+        const EndBookingWeekNumber = calWeekNo(item.endTime);
+        if (
+          weekNo >= StartBookingWeekNumber &&
+          weekNo <= EndBookingWeekNumber
+        ) {
+          thisWeek.push(item);
+        } else if (
+          weekNo + 1 >= StartBookingWeekNumber &&
+          weekNo + 1 <= EndBookingWeekNumber
+        ) {
+          nextWeek.push(item);
+        }
+      }
+    });
+    setThisWeekEvent(thisWeek);
+    setNextWeekEvent(nextWeek);
+  };
+
+  const getMonthEvent = (date) => {
+    const event = [];
+    bookingData.forEach((item) => {
+      const startDate = new Date(item.startTime);
+      const endDate = new Date(item.endTime);
+      if (
+        date.getFullYear() !== startDate.getFullYear() &&
+        date.getFullYear() !== endDate.getFullYear()
+      ) {
+        return;
+      }
+      if (roomId === item.roomId) {
+        if (
+          startDate.getMonth() === date.getMonth() ||
+          endDate.getMonth() === date.getMonth()
+        ) {
+          event.push(item);
+        }
+      }
+    });
+    setMonthEvent(event);
+  };
+
+  useEffect(() => {
+    const fetch = async () => {
+      const date = new Date("2019-09-28 13:00:00"); //mockup for test
+
+      setThisDate(date.getDate());
+      setThisDay(weekday[date.getDay()]);
+      setThisMonth(month[date.getMonth()]);
+      getDailyEvent(date.toISOString().split("T")[0]);
+      getWeekEvent(date);
+      getMonthEvent(date);
+    };
+
+    fetch();
+  }, []);
+
   return (
     <div className="w-screen h-screen bg-bggray flex justify-center items-center">
       <div className="w-5/6 h-5/6 flex">
@@ -89,35 +222,146 @@ function BookingListPage() {
                   </span>
                 </div>
               </div>
-              <div className="mt-16 w-5/6 h-52 border-2 flex flex-col justify-between">
+              <div className="mt-16 w-5/6 h-40 flex flex-col">
                 <div>
                   <p className="text-white ">Upcoming</p>
                 </div>
-                <div className="text-4xl font-thin">
-                  <p className="text-white ">Monday</p>
-                  <p className="text-white">28 Sep</p>
-                </div>
-                <div>
-                  <p className="text-white ">Monday</p>
-                  <p className="text-white">28 Sep</p>
+                <div className="text-4xl font-thin mt-5">
+                  <p className="text-white ">{thisDay}</p>
+                  <p className="text-white">
+                    {thisDate} {thisMonth.slice(0, 3)}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
           <div className="h-2/5 bg-deepblue2 flex flex-col items-end">
-            <div className="w-5/6 h-52 border-2 mt-3 flex flex-col gap-4">
-              <div>
-                <p className="text-white ">15.00-16.00</p>
-                <p className="text-white ">Meeting</p>
-              </div>
-              <div>
-                <p className="text-white ">15.00-16.00</p>
-                <p className="text-white ">Meeting</p>
-              </div>
+            <div className="w-5/6 h-52 mt-2 flex flex-col gap-4">
+              {dailyEvent.length > 0 ? (
+                dailyEvent.map((item) => {
+                  return (
+                    <div key={item.id}>
+                      <p className="text-white ">
+                        {item.startTime.slice(-8)} - {item.endTime.slice(-8)}
+                      </p>
+                      <p className="text-white ">{item.title}</p>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-white">No event in this day</p>
+              )}
             </div>
           </div>
         </div>
-        <div className="h-full w-3/5 bg-white">test</div>
+        <div className="h-full w-3/5 bg-white flex flex-col">
+          <div className="w-full bg-navgray h-24 flex flex-col justify-end">
+            <div className="flex">
+              <div
+                className="ml-10 cursor-pointer"
+                onClick={() => setShowEvent("this week")}
+              >
+                <span
+                  className={`text-xl font-bold ${
+                    showEvent === "this week" ? "underline" : ""
+                  }`}
+                >
+                  This Week
+                </span>
+              </div>
+              <div
+                className="ml-10 cursor-pointer"
+                onClick={() => setShowEvent("next week")}
+              >
+                <span
+                  className={`text-xl font-bold ${
+                    showEvent === "next week" ? "underline" : ""
+                  }`}
+                >
+                  Next Week
+                </span>
+              </div>
+              <div
+                className="ml-10 cursor-pointer"
+                onClick={() => setShowEvent("whole month")}
+              >
+                <span
+                  className={`text-xl font-bold ${
+                    showEvent === "whole month" ? "underline" : ""
+                  }`}
+                >
+                  Whole Month
+                </span>
+              </div>
+            </div>
+          </div>
+          {showEvent === "this week" ? (
+            <div>
+              {thisWeekEvent.length > 0 ? (
+                thisWeekEvent.map((item) => {
+                  return (
+                    <div key={item.id} className="flex flex-col gap-1 pl-10">
+                      <p>{item.startTime.slice(0, 10)}</p>
+                      <p className="text-black ">
+                        {item.startTime.slice(-8)} - {item.endTime.slice(-8)}
+                      </p>
+                      <p className="text-black ">{item.title}</p>
+                      <hr className="w-52" />
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="pl-10 pt-10">No event in this week</p>
+              )}
+            </div>
+          ) : (
+            ""
+          )}
+          {showEvent === "next week" ? (
+            <div>
+              {nextWeekEvent.length > 0 ? (
+                nextWeekEvent.map((item) => {
+                  return (
+                    <div key={item.id} className="flex flex-col gap-1 pl-10">
+                      <p>{item.startTime.slice(0, 10)}</p>
+                      <p className="text-black ">
+                        {item.startTime.slice(-8)} - {item.endTime.slice(-8)}
+                      </p>
+                      <p className="text-black ">{item.title}</p>
+                      <hr className="w-52" />
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="pl-10 pt-10">No event in Next week</p>
+              )}
+            </div>
+          ) : (
+            ""
+          )}
+          {showEvent === "whole month" ? (
+            <div>
+              {monthEvent.length > 0 ? (
+                monthEvent.map((item) => {
+                  return (
+                    <div key={item.id} className="flex flex-col gap-1 pl-10">
+                      <p>{item.startTime.slice(0, 10)}</p>
+                      <p className="text-black ">
+                        {item.startTime.slice(-8)} - {item.endTime.slice(-8)}
+                      </p>
+                      <p className="text-black ">{item.title}</p>
+                      <hr className="w-52" />
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="pl-10 pt-10">No event in this month</p>
+              )}
+            </div>
+          ) : (
+            ""
+          )}
+        </div>
       </div>
     </div>
   );
